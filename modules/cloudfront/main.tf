@@ -27,7 +27,8 @@ resource "aws_cloudfront_distribution" "this" {
   enabled             = true
   default_root_object = "index.html"
 
-  origins {
+  # ✅ Correct block name is "origin", singular
+  origin {
     domain_name = var.bucket_domain_name
     origin_id   = "s3-origin-${var.domain_name}"
 
@@ -44,16 +45,18 @@ resource "aws_cloudfront_distribution" "this" {
 
     forwarded_values {
       query_string = false
-      cookies { forward = "none" }
+      cookies {
+        forward = "none"
+      }
     }
   }
 
   aliases = concat([var.domain_name], var.alt_domain_names)
 
   viewer_certificate {
-    acm_certificate_arn            = aws_acm_certificate.cert.arn
-    ssl_support_method             = "sni-only"
-    minimum_protocol_version       = "TLSv1.2_2021"
+    acm_certificate_arn      = aws_acm_certificate.cert.arn
+    ssl_support_method        = "sni-only"
+    minimum_protocol_version  = "TLSv1.2_2021"
   }
 
   restrictions {
@@ -64,4 +67,3 @@ resource "aws_cloudfront_distribution" "this" {
 
   price_class = "PriceClass_100"
 }
-

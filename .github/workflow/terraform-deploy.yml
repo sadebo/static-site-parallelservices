@@ -1,0 +1,41 @@
+name: Deploy Static Website
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+    - "website/**"
+    - "*.tf"
+    - "modules/**"
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials via OIDC
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: arn:aws:iam::423350936816:role/github-terraform-deploy
+        aws-region: us-east-1
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: 1.7.0
+
+    - name: Terraform Init
+      run: terraform init -input=false
+
+    - name: Terraform Apply
+      run: terraform apply -auto-approve -input=false -var="cloudflare_api_token=${{ secrets.CLOUDFLARE_API_TOKEN }}"
+
+    - name: Sync Website Files
+      run: aws s3 sync ./website s3://parallelservicesllc-static-site/ --delete

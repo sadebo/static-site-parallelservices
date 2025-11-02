@@ -21,23 +21,26 @@ resource "aws_iam_role" "github_oidc_role" {
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
-    Statement = [{
-      Effect = "Allow",
-      Principal = {
-        Federated = aws_iam_openid_connect_provider.github.arn
-      },
-      Action = "sts:AssumeRoleWithWebIdentity",
-      Condition = {
-        StringLike = {
-          # Restrict by repository and branch
-          "token.actions.githubusercontent.com:sub" = "repo:${var.repo}:ref:refs/heads/${var.branch}"
+    Statement = [
+      {
+        Sid    = "GitHubOIDCTrust",
+        Effect = "Allow",
+        Principal = {
+          Federated = aws_iam_openid_connect_provider.github.arn
         },
-        StringEquals = {
-          # 👇 Required audience claim — fixes “Not authorized” error
-          "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
+        Action = "sts:AssumeRoleWithWebIdentity",
+        Condition = {
+          # 👇 Audience must always equal sts.amazonaws.com
+          StringEquals = {
+            "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
+          },
+          # 👇 Allow any ref (branch/tag/pr) within your repo
+          StringLike = {
+            "token.actions.githubusercontent.com:sub" = "repo:${var.repo}:*"
+          }
         }
       }
-    }]
+    ]
   })
 }
 

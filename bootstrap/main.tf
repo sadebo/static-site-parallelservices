@@ -30,11 +30,11 @@ resource "aws_iam_role" "github_oidc_role" {
         },
         Action = "sts:AssumeRoleWithWebIdentity",
         Condition = {
-          # 👇 Audience must always equal sts.amazonaws.com
+          # Audience must always equal sts.amazonaws.com
           StringEquals = {
             "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
           },
-          # 👇 Allow any ref (branch/tag/pr) within your repo
+          # Allow any ref (branch/tag/pr) within your repo
           StringLike = {
             "token.actions.githubusercontent.com:sub" = "repo:${var.repo}:*"
           }

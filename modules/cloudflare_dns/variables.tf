@@ -9,5 +9,5 @@ variable "validation_records" {
     resource_record_type = string
     resource_record_value = string
   }))
-  default = []  # prevents 'Invalid for_each argument' when empty
+  default = []
 }

@@ -1,4 +1,4 @@
 variable "cloudflare_api_token" {
-  description = "Cloudflare API token with DNS edit permission"
+  description = "API token for managing DNS in Cloudflare"
   sensitive   = true
 }

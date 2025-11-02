@@ -1,4 +1,4 @@
-name: Terraform Two-Phase Apply (AWS + Cloudflare)
+name: Terraform Two-Phase Deploy (OIDC + AWS + Cloudflare)
 
 on:
   push:
@@ -10,6 +10,7 @@ on:
     - "website/**"
 
 permissions:
+  # 👇 Required for GitHub → AWS OIDC trust
   id-token: write
   contents: read
 
@@ -22,37 +23,54 @@ jobs:
     environment: production
 
     steps:
+    # ------------------------------------------------------
+    # 1️⃣ Checkout code
+    # ------------------------------------------------------
     - name: Checkout repository
       uses: actions/checkout@v4
 
+    # ------------------------------------------------------
+    # 2️⃣ Configure AWS credentials via OIDC
+    # ------------------------------------------------------
+    # This step exchanges a GitHub-issued OIDC token for
+    # temporary AWS credentials using your IAM role
     - name: Configure AWS credentials via OIDC
       uses: aws-actions/configure-aws-credentials@v4
       with:
         role-to-assume: arn:aws:iam::<ACCOUNT_ID>:role/github-terraform-deploy
         aws-region: ${{ env.AWS_REGION }}
+        # Optional: you can add role-session-name if you want custom CloudTrail names
+        role-session-name: GitHubActionsOIDC
 
+    # ------------------------------------------------------
+    # 3️⃣ Install Terraform
+    # ------------------------------------------------------
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
       with:
         terraform_version: 1.8.5
 
+    # ------------------------------------------------------
+    # 4️⃣ Terraform Init
+    # ------------------------------------------------------
     - name: Terraform Init
       run: terraform init -input=false
 
-    ###############################################
-    # PHASE 1 — AWS resources (S3, CloudFront, ACM)
-    ###############################################
+    # ------------------------------------------------------
+    # 5️⃣ Phase 1 – AWS (S3, ACM, CloudFront)
+    # ------------------------------------------------------
+    # This creates all AWS infra and ACM validation outputs.
     - name: Terraform Apply (AWS Phase)
       run: terraform apply -target=module.cloudfront -auto-approve -input=false
 
-    ###############################################
-    # PHASE 2 — Cloudflare (after ACM validation records exist)
-    ###############################################
+    # ------------------------------------------------------
+    # 6️⃣ Phase 2 – Cloudflare (after ACM validation records exist)
+    # ------------------------------------------------------
     - name: Terraform Apply (Cloudflare Phase)
       run: terraform apply -auto-approve -input=false \ -var="cloudflare_api_token=${{ secrets.CLOUDFLARE_API_TOKEN }}"
 
-    ###############################################
-    # OPTIONAL: Sync website files
-    ###############################################
-    - name: Sync Website Files
+    # ------------------------------------------------------
+    # 7️⃣ Sync static website files
+    # ------------------------------------------------------
+    - name: Sync Website Files to S3
       run: aws s3 sync ./website s3://parallelservicesllc-static-site/ --delete

@@ -11,3 +11,10 @@ output "github_policy_arn" {
   description = "ARN of the IAM policy attached to the GitHub OIDC role"
   value       = aws_iam_policy.terraform_policy.arn
 }
+
+data "aws_caller_identity" "current" {}
+
+output "account_id" {
+  description = "AWS Account ID"
+  value       = data.aws_caller_identity.current.account_id
+}

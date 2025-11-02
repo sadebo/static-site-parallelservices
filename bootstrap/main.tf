@@ -63,7 +63,11 @@ resource "aws_iam_policy" "terraform_policy" {
           "acm:*",
           "iam:GetRole",
           "iam:PassRole",
-          "logs:*"
+          "logs:*",
+          "dynamodb:GetItem",
+          "dynamodb:PutItem",
+          "dynamodb:DeleteItem",
+          "dynamodb:DescribeTable"
         ],
         Resource = "*"
       }

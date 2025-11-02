@@ -1,23 +1,26 @@
-name: Deploy Static Website
+name: Terraform Two-Phase Apply (AWS + Cloudflare)
 
 on:
   push:
     branches: [ "main" ]
     paths:
-    - "website/**"
-    - "*.tf"
+    - "**.tf"
+    - ".github/workflows/**"
     - "modules/**"
-    - ".github/workflows/terraform-deploy.yml"
-    - "bootstrap/**"
+    - "website/**"
 
 permissions:
   id-token: write
   contents: read
 
+env:
+  AWS_REGION: us-east-1
+
 jobs:
-  deploy:
+  terraform:
     runs-on: ubuntu-latest
     environment: production
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -25,19 +28,31 @@ jobs:
     - name: Configure AWS credentials via OIDC
       uses: aws-actions/configure-aws-credentials@v4
       with:
-        role-to-assume: arn:aws:iam::423350936816:role/github-terraform-deploy
-        aws-region: us-east-1
+        role-to-assume: arn:aws:iam::<ACCOUNT_ID>:role/github-terraform-deploy
+        aws-region: ${{ env.AWS_REGION }}
 
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
       with:
-        terraform_version: 1.7.0
+        terraform_version: 1.8.5
 
     - name: Terraform Init
       run: terraform init -input=false
 
-    - name: Terraform Apply
-      run: terraform apply -auto-approve -input=false -var="cloudflare_api_token=${{ secrets.CLOUDFLARE_API_TOKEN }}"
+    ###############################################
+    # PHASE 1 — AWS resources (S3, CloudFront, ACM)
+    ###############################################
+    - name: Terraform Apply (AWS Phase)
+      run: terraform apply -target=module.cloudfront -auto-approve -input=false
 
+    ###############################################
+    # PHASE 2 — Cloudflare (after ACM validation records exist)
+    ###############################################
+    - name: Terraform Apply (Cloudflare Phase)
+      run: terraform apply -auto-approve -input=false \ -var="cloudflare_api_token=${{ secrets.CLOUDFLARE_API_TOKEN }}"
+
+    ###############################################
+    # OPTIONAL: Sync website files
+    ###############################################
     - name: Sync Website Files
       run: aws s3 sync ./website s3://parallelservicesllc-static-site/ --delete

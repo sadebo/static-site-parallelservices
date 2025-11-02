@@ -37,7 +37,7 @@ jobs:
     - name: Configure AWS credentials via OIDC
       uses: aws-actions/configure-aws-credentials@v4
       with:
-        role-to-assume: arn:aws:iam::<ACCOUNT_ID>:role/github-terraform-deploy
+        role-to-assume: arn:aws:iam::423350936816:role/github-terraform-deploy
         aws-region: ${{ env.AWS_REGION }}
         # Optional: you can add role-session-name if you want custom CloudTrail names
         role-session-name: GitHubActionsOIDC
